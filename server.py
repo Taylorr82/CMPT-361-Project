@@ -12,6 +12,9 @@ import sys
 import socket
 import json
 import time
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import pad, unpad
 
 class server:
     serverPort = 13000
@@ -46,6 +49,20 @@ class server:
                 self.databaseFile.close()
             except:
                 pass
+
+            privateKeyLen = 256
+            privateKey = get_random_bytes(int(privateKeyLen/8))
+            cipherPrivate = AES.new(privateKey, AES.MODE_ECB)
+            private = open("server_public.pem", "w")
+            private.write(cipherPrivate)
+            private.close()
+
+            publicKeyLen = 256
+            publicKey = get_random_bytes(int(publicKeyLen/8))
+            cipherPublic = AES.new(publicKey, AES.MODE_ECB)
+            public = open("server_public.pem", "w")
+            public.write(cipherPublic)
+            public.close()
         
 
         try:
