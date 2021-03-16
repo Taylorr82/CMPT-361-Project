@@ -7,7 +7,6 @@
     Author: Robert Taylor
 """
 
-
 import sys
 import socket
 import json
@@ -88,12 +87,15 @@ class server:
                     message = int(message)
 
                     if message == 1:
-                        self.sendInfo()
-                        
+                        self.sendEmail()
+
                     elif message == 2:
-                        self.uploadFile()
-                        
+                        self.viewInbox()
+
                     elif message == 3:
+                        self.viewEmail()
+
+                    elif message == 4:
                         self.terminateClient()
                         continue
                         
@@ -112,59 +114,14 @@ class server:
             except ConnectionResetError:
                 self.terminateClient()
 
-    # Upload file subprotocol
-    # asks client for file name and size
-    # overwrites file if already present
-    # Writes metadata to Database.json
-    def uploadFile(self):
+    def sendEmail(self):
+        pass
 
-        self.sendMessageASCII("Please provide the file name: ")
+    def viewInbox(self):
+        pass
 
-        name = self.receiveMessageASCII(2048)
-        nameSize = name.split("\n")
-
-        size = nameSize[1]
-        name = nameSize[0]
-
-        size = int(size)
-        receivedSize = 0
-
-        newData = b""
-
-        self.sendMessageASCII("OK {}".format(size))
-
-        while receivedSize != size:
-            newData += self.clientConnectionSocket.recv(2048)
-            receivedSize = len(newData)
-
-        with open(name, 'wb') as f:
-            f.write(newData)
-
-        inner_dict = dict()
-        inner_dict['size'] = str(size)
-        inner_dict['time'] = time.strftime("%Y-%m-%d %H:%M:%S")
-
-        self.database[name] = inner_dict
-
-        with open("Database.json", 'w') as db:
-            db.write(json.dumps(self.database))
-            db.close()
-
-        return
-
-    # send all file metadata to client
-    def sendInfo(self):
-        
-        outstr = "{:20s}{:20s}{}\n".format("Name", "Size(bytes)", "Upload Date and time")
-
-        for name in self.database.keys():
-            inner_dict = self.database[name]
-            outstr += "{:20s}{:20s}{}\n".format(name, inner_dict["size"], inner_dict['time'])
-
-        outstr += '\n'
-
-        self.sendMessageASCII(outstr)
-
+    def viewEmail(self):
+        pass
 
     # Terminate client connection
     def terminateClient(self):

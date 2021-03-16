@@ -68,13 +68,16 @@ class client:
                 option = int(option)
 
                 if option == 1:
-                    self.sendInfo()
+                    self.sendEmail()
                     continue
 
                 elif option == 2:
-                    self.uploadFile()
+                    self.viewInbox()
 
-                elif option==3:
+                elif option == 3:
+                    self.viewEmail()
+
+                elif option == 4:
                     self.terminate()
 
                 else:
@@ -85,50 +88,14 @@ class client:
                 self.clientSocket.close()
                 sys.exit(1)
 
-    # Upload file Protocol
-    # Receive and print prompt for name, send name and size of file. 
-    # Receive "OK {size}" from server and then upload file
-    def uploadFile(self):
-        done = False
-        print(self.receiveMessageASCII(2048))
-        fname = input()
-        while not done:
-            try:
-                upload_f = open(fname,"rb")
-                done = True
-            except:
-                print("invalid file. please try again: ")
+    def sendEmail(self):
+        pass
 
-        # find the end of the file
-        upload_f.seek(0,2)
+    def viewInbox(self):
+        pass;        
 
-        #get the size of the file
-        size = upload_f.tell()
-
-        # return to the beginning to send file
-        upload_f.seek(0,0)
-        self.sendMessageASCII("{}\n{}".format(fname,size))
-
-        ack = self.receiveMessageASCII(2048)
-        print(ack)
-        if "OK" in ack:
-            sentData = 0
-            try:
-                while sentData != size:
-                    data = upload_f.read(2048)
-                    sentData += len(data)
-                    self.clientSocket.send(data)
-            except:
-                print("Error uploading file.")
-                sys.exit(1)
-
-        print("Upload process complete.")
-    
-    # get metadata protocol
-    # Client is only responsible for printing what the server sends
-    def sendInfo(self):
-        print(self.receiveMessageASCII(2048))
-        
+    def viewEmail(self):
+        pass
 
     # Send a message to connected server encoded as ascii
     def sendMessageASCII(self, message):
