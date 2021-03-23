@@ -1,11 +1,6 @@
-"""
-    Server program for CMPT361 file server
-
-    Stores a database of files upploaded by client program
-    Database and files are preserved after server program quits
-
-    Author: Robert Taylor
-"""
+# CMPT361 - Project
+# MacEwan University
+# Authors: Robert Taylor, Jayden Laturnus, Braden Simmons
 
 import sys
 import socket
@@ -37,7 +32,7 @@ class server:
     # does not start listening on the socket
     def __init__(self):
 
-        try:
+        '''try:
             self.databaseFile = open("Database.json", "r+")
             self.database = json.load(self.databaseFile)
 
@@ -64,44 +59,48 @@ class server:
             cipherPublic = AES.new(publicKey, AES.MODE_ECB)
             public = open("server_public.pem", "w")
             public.write(cipherPublic)
-            public.close()
-        
+            public.close()'''
 
         try:
             # create socket
             self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         except socket.error as e:
-            print('Error in server socket creation:',e)
+            print('Error in server socket creation: ', e)
             sys.exit(1)
         
         # bind port to socket
         try:
             self.serverSocket.bind(('', self.serverPort))
         except socket.error as e:
-            print('Error in server socket binding:',e)
+            print('Error in server socket binding: ', e)
             sys.exit(1)
     
     # starts listening on the socket and handles input from client
     def start(self):
-        optionsmessage = "\n\nPlease select the operation:\n1) view uploaded files' information\n2) Upload a file\n3) Terminate the connection\nChoice: "
+        optionsMessage = "\nSelect the operation:\n1) Create and send an email\n2) Display the inbox list\n3) Display the email contents\n4) Terminate the connection\n\nChoice: "
         while 1:
             try:
                 self.waitForConnection()
                 self.sendMessageASCII("Welcome to our system.\nEnter your username: ")
-                uname = self.receiveMessageASCII(2048)
-                if uname != "user1":
+
+                username = self.receiveMessageASCII(2048)
+                if username != "user1":
                     self.sendMessageASCII("Incorrect username. Connection Terminated.")
                     self.terminateClient()
                     continue
+
+                self.sendMessageASCII("Enter your password: ")
+
+                password = self.receiveMessageASCII(2048)
                 
-                self.sendMessageASCII(optionsmessage)
+                self.sendMessageASCII(optionsMessage)
 
                 while self.clientConnected:
 
                     message = self.receiveMessageASCII(2048)
                     if not message.isdigit():
-                        self.sendMessageASCII("Error: not a number\n\n"+optionsmessage)
+                        self.sendMessageASCII("Error: not a number\n\n"+optionsMessage)
                         continue
                     
                     message = int(message)
@@ -120,7 +119,8 @@ class server:
                         continue
                         
                     else:
-                        self.sendMessageASCII("Invalid Option\n"+optionsmessage)
+                        print(message)
+                        self.sendMessageASCII("Invalid Option\n"+optionsMessage)
                         continue
 
                     self.sendMessageASCII(optionsmessage)

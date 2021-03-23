@@ -1,10 +1,6 @@
-"""
-    Client program for CMPT361 File server
-
-    Handles sending commands and data to the file server
-
-    Author: Robert Taylor
-"""
+# CMPT361 - Project
+# MacEwan University
+# Authors: Robert Taylor, Jayden Laturnus, Braden Simmons
 
 import sys
 import socket
@@ -42,25 +38,31 @@ class client:
             connected = True
         
         except socket.error as e:
-            print('An error occured:',e)
+            print('An error occured: ', e)
             self.clientSocket.close()
             sys.exit(1)
 
-        #uname = input("Enter your username: ")
-        #passwrd = input("Enter your password: ")
-    
-        while connected:
-            try:
+        try:
+            # Username chain
+            message = self.receiveMessageASCII(2048)
+            username = input(message)
+            self.sendMessageASCII(username)
+            # Password chain
+            message = self.receiveMessageASCII(2048)
+            password = input(message)
+            self.sendMessageASCII(password)
+
+            # Enter option loop
+            while connected:
                 message = self.receiveMessageASCII(2048)
-                print(message)
-                if "Terminated" in message:
+
+                if "Invalid username or password.\nTerminating.\n" in message:
                     self.terminate()
 
-                option = input()
+                option = input(message)
 
                 while (len(option) == 0) or (not option.isdigit()):
-                    print("invalid option. Please try again: ")
-                    option=input()
+                    option = input("Invalid option. Please try again: ")
 
                 self.sendMessageASCII(option)
 
@@ -82,10 +84,10 @@ class client:
                 else:
                     continue
 
-            except socket.error:
-                print("unknown socket error")
-                self.clientSocket.close()
-                sys.exit(1)
+        except socket.error:
+            print("unknown socket error")
+            self.clientSocket.close()
+            sys.exit(1)
 
     def sendEmail(self):
         m = self.receiveMessageASCII(2048)
