@@ -10,7 +10,10 @@
 import sys
 import socket
 import json
-import time
+import datetime
+import glob
+import os
+
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
@@ -131,14 +134,80 @@ class server:
             except ConnectionResetError:
                 self.terminateClient()
 
+    #Process the email sent by the client
     def sendEmail(self):
-        pass
+        self.sendMessageASCII("Send the email")
+
+        #get size from client
+        size = self.receiveMessageASCII(2048)
+
+        #create the email
+        message = self.createMessage(size)
+        emailSplit = message.split("\n")
+
+        #who is the message from
+        emailFromSplit = emailSplit[0].split()
+        emailFrom = emailFromSplit[1]
+
+        #the title of the email
+        emailTitleSplit = emailSplit[2].split()
+        emailTitle = emailTitleSplit[1]
+
+        #who is the email for
+        to = emailSplit[0].split()
+        names = to[1].split(";")
+
+        #print the message that the email was recieved
+        self.createReceiveMessage(emailFrom, names, size)
+
+        #insert date and time into the email
+        self.getDateAndTime(emailSplit)
+
+        #create file and save to directory
+        for i in range(len(names)):
+            fileName = emailFrom + "_" + emailTitle + ".txt"
+            cwd = os.getcwd()
+            for name in glob.glob(cwd + "\*"):
+                if names[i] in name:
+                    path = os.path.join(name, fileName)
+                    with open(path, "w") as f:
+                        f.write(emailSplit.join())
 
     def viewInbox(self):
         pass
 
     def viewEmail(self):
         pass
+
+    #create the confirmation message that the email was recieved
+    def createReceiveMessage(self, sender, to, size):
+        m = "An email from " + sender + " is sent to "
+        for i in range(len(to)):
+            if(i == len(to) - 1):
+                m += to[i]
+            else:
+                m += to[i] + ";"
+        m += " has a content length of " + size + ".\n"
+        print(m)
+
+
+    #Get date and time and insert into list
+    def getDateAndTime(self, emailList):
+        dateAndTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        time = "Time and Date: " + str(dateAndTime) + "\n"
+        emailList.insert(2, time)
+
+    #Create email based on client messages
+    def createMessage(self, size):
+        message = ""
+        total = 0
+        email = self.receiveMessageASCII(2048)
+        message += email
+        while total < int(size):
+            total += len(email)
+            email = self.receiveMessageASCII(2048)
+            message += email
+        return message
 
     # Terminate client connection
     def terminateClient(self):

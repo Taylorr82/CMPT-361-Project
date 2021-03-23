@@ -29,7 +29,7 @@ class client:
 
         except socket.error as e:
             print('Error in client socket creation:',e)
-            sys.exit(1)    
+            sys.exit(1)
 
     # Ask user for server name and then connect to the server
     # Handles user input and sending input to the server
@@ -46,15 +46,9 @@ class client:
             self.clientSocket.close()
             sys.exit(1)
 
-        uname = input("Enter your username: ")
-        passwrd = input("Enter your password: ")
-
-        
-
-        #print(self.receiveMessageASCII(2048))
-        #uname = input()
-        #self.sendMessageASCII(uname)
-
+        #uname = input("Enter your username: ")
+        #passwrd = input("Enter your password: ")
+    
         while connected:
             try:
                 message = self.receiveMessageASCII(2048)
@@ -94,13 +88,90 @@ class client:
                 sys.exit(1)
 
     def sendEmail(self):
-        pass
+        m = self.receiveMessageASCII(2048)
+        to = input("Enter destinations (separated by ;): ")
+        title = self.getTitle()
+        choice = self.getChoice()
+        if(choice.strip().lower() == "n"):
+            message = self.getMessage()
+            email = self.createEmail(to, title, message)
+
+            #send the size of the email to the server
+            size = sys.getsizeof(email)
+            self.sendMessageASCII(str(size))
+
+            #send the email to the server
+            self.clientSocket.sendall(email)
+            #self.sendSegments(size, email)
+            
+        else:
+            self.readFile(to, title)
+            
 
     def viewInbox(self):
         pass;        
 
     def viewEmail(self):
         pass
+
+    #Create the email that will be sent to the server
+    def createEmail(self, to, title, message):
+        email = "From: " + self.uname + "\nTo: " + to + "\nTitle: " + title + "\nContent Length: " + str(len(message))\
+            + "\nContent: \n" + message
+        return email
+
+    #send the contents to the server
+    def sendSegments(self, size, contents):
+        total = 0
+        while total < size:
+            s = self.clientSocket.send(contents.encode("ascii"))
+            total += s
+
+    #Get the title of the email
+    def getTitle(self):
+        title = input("Enter title: ")
+        while len(title) > 100:
+            title = input("Too many characters! Enter title: ")
+        return title
+
+    #send a message based on a file
+    def readFile(self, to, title):
+        filename = input("Enter filename: ")
+        filename = filename.strip()
+        try:
+            f = open(filename, "r")
+            message = f.read()
+            if(len(message) > 1000000):
+                f.close()
+                print("Message is too long!\n")
+            else:
+                email = self.createEmail(to, title, message)
+                f.close()
+
+                #send the size of the email to the server
+                size = sys.getsizeof(email)
+                self.sendMessageASCII(str(size))
+
+                #send the email to the server
+                self.clientSocket.sendall(email)
+                #self.sendSegments(size, email)
+
+        except FileNotFoundError:
+                print("File does not exist")
+
+    #Get the choice of message
+    def getChoice(self):
+        choice = input("Would you like to load the contents from a file (Y/N): ")
+        while choice.lower() != "y" and choice.lower() != "n":
+            choice = input("Would you like to load the contents from a file (Y/N): ")
+        return choice
+
+    #Get the message
+    def getMessage(self):
+        message = input("Enter message contents: ")
+        while len(message) > 1000000:
+            message = input("Too many characters! Enter message contents: ")
+        return message
 
     # Send a message to connected server encoded as ascii
     def sendMessageASCII(self, message):
