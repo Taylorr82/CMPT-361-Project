@@ -7,11 +7,12 @@
     Author: Robert Taylor
 """
 
-
 import sys
 import socket
 import json
-import time
+import datetime
+import glob
+import os
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
@@ -105,12 +106,15 @@ class server:
                     message = int(message)
 
                     if message == 1:
-                        self.sendInfo()
-                        
+                        self.sendEmail()
+
                     elif message == 2:
-                        self.uploadFile()
-                        
+                        self.viewInbox()
+
                     elif message == 3:
+                        self.viewEmail()
+
+                    elif message == 4:
                         self.terminateClient()
                         continue
                         
@@ -129,59 +133,80 @@ class server:
             except ConnectionResetError:
                 self.terminateClient()
 
-    # Upload file subprotocol
-    # asks client for file name and size
-    # overwrites file if already present
-    # Writes metadata to Database.json
-    def uploadFile(self):
+    #Process the email sent by the client
+    def sendEmail(self):
+        self.sendMessageASCII("Send the email")
 
-        self.sendMessageASCII("Please provide the file name: ")
+        #get size from client
+        size = self.receiveMessageASCII(2048)
 
-        name = self.receiveMessageASCII(2048)
-        nameSize = name.split("\n")
+        #create the email
+        message = self.createMessage(size)
+        emailSplit = message.split("\n")
 
-        size = nameSize[1]
-        name = nameSize[0]
+        #who is the message from
+        emailFromSplit = emailSplit[0].split()
+        emailFrom = emailFromSplit[1]
 
-        size = int(size)
-        receivedSize = 0
+        #the title of the email
+        emailTitleSplit = emailSplit[2].split()
+        emailTitle = emailTitleSplit[1]
 
-        newData = b""
+        #who is the email for
+        to = emailSplit[0].split()
+        names = to[1].split(";")
 
-        self.sendMessageASCII("OK {}".format(size))
+        #print the message that the email was recieved
+        self.createReceiveMessage(emailFrom, names, size)
 
-        while receivedSize != size:
-            newData += self.clientConnectionSocket.recv(2048)
-            receivedSize = len(newData)
+        #insert date and time into the email
+        self.getDateAndTime(emailSplit)
 
-        with open(name, 'wb') as f:
-            f.write(newData)
+        #create file and save to directory
+        for i in range(len(names)):
+            fileName = emailFrom + "_" + emailTitle + ".txt"
+            cwd = os.getcwd()
+            for name in glob.glob(cwd + "\*"):
+                if names[i] in name:
+                    path = os.path.join(name, fileName)
+                    with open(path, "w") as f:
+                        f.write(emailSplit.join())
 
-        inner_dict = dict()
-        inner_dict['size'] = str(size)
-        inner_dict['time'] = time.strftime("%Y-%m-%d %H:%M:%S")
+    def viewInbox(self):
+        pass
 
-        self.database[name] = inner_dict
+    def viewEmail(self):
+        pass
 
-        with open("Database.json", 'w') as db:
-            db.write(json.dumps(self.database))
-            db.close()
+    #create the confirmation message that the email was recieved
+    def createReceiveMessage(self, sender, to, size):
+        m = "An email from " + sender + " is sent to "
+        for i in range(len(to)):
+            if(i == len(to) - 1):
+                m += to[i]
+            else:
+                m += to[i] + ";"
+        m += " has a content length of " + size + ".\n"
+        print(m)
 
-        return
 
-    # send all file metadata to client
-    def sendInfo(self):
-        
-        outstr = "{:20s}{:20s}{}\n".format("Name", "Size(bytes)", "Upload Date and time")
+    #Get date and time and insert into list
+    def getDateAndTime(self, emailList):
+        dateAndTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        time = "Time and Date: " + str(dateAndTime) + "\n"
+        emailList.insert(2, time)
 
-        for name in self.database.keys():
-            inner_dict = self.database[name]
-            outstr += "{:20s}{:20s}{}\n".format(name, inner_dict["size"], inner_dict['time'])
-
-        outstr += '\n'
-
-        self.sendMessageASCII(outstr)
-
+    #Create email based on client messages
+    def createMessage(self, size):
+        message = ""
+        total = 0
+        email = self.receiveMessageASCII(2048)
+        message += email
+        while total < int(size):
+            total += len(email)
+            email = self.receiveMessageASCII(2048)
+            message += email
+        return message
 
     # Terminate client connection
     def terminateClient(self):
