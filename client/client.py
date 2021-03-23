@@ -118,7 +118,13 @@ class client:
         self.sendMessageASCII("OK")
 
     def viewEmail(self):
-        pass
+        message = self.receiveMessageASCII(2048)
+        index = input(message)
+        self.sendMessageASCII(str(index))
+        # Receive email contents
+        message = self.receiveMessageASCII(2048)
+        print(message)
+        self.sendMessageASCII("OK")
 
     #Create the email that will be sent to the server
     def createEmail(self, to, title, message):

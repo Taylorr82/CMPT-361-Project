@@ -136,7 +136,8 @@ class server:
                 continue
 
             elif message == 3:
-                self.viewEmail()
+                self.viewEmail(optionsMessage)
+                continue
 
             elif message == 4:
                 self.terminateClient()
@@ -201,8 +202,27 @@ class server:
 
         self.sendMessageASCII(message)
 
-    def viewEmail(self):
-        pass
+    def viewEmail(self, optionsMessage):
+        self.sendMessageASCII("Enter the email index you wish to view: ")
+        message = self.receiveMessageASCII(2048)
+
+        if not message.isdigit():
+            self.sendMessageASCII("Error: Not an Index.")
+            return
+
+        index = int(message)
+        emails = self.buildEmailList()
+        sortedEmails = self.sortEmails(emails)
+
+        if index < 1 or index > len(sortedEmails):
+            self.sendMessageASCII("Error: Index Out of Range.")
+            return
+
+        email = sortedEmails[index-1]["FileName"]
+
+        with open(email, "r") as e:
+            contents = ''.join(e.readlines())
+            self.sendMessageASCII("\n" + contents + "\n")
 
     def sortEmails(self, emails):
         emailContents = []
