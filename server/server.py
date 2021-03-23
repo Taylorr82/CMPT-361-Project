@@ -172,8 +172,11 @@ class server:
         emailTitle = emailTitleSplit[1]
 
         #who is the email for
-        to = emailSplit[0].split()
-        names = to[1].split(";")
+        to = emailSplit[1].split()
+        if(";" in to[1]):
+            names = to[1].split(";")
+        else:
+            names = [to[1]]
 
         #print the message that the email was recieved
         self.createReceiveMessage(emailFrom, names, size)
@@ -183,13 +186,18 @@ class server:
 
         #create file and save to directory
         for i in range(len(names)):
+            temp = ""
             fileName = emailFrom + "_" + emailTitle + ".txt"
             cwd = os.getcwd()
-            for name in glob.glob(cwd + "\*"):
+            for name in glob.glob(cwd + "/*"):
                 if names[i] in name:
                     path = os.path.join(name, fileName)
-                    with open(path, "w") as f:
-                        f.write(emailSplit.join())
+                    f = open(path, "w")
+                    for elem in emailSplit:
+                        temp += elem + "\n"
+                    f.write(temp)
+                    f.close()
+                        
 
     def viewInbox(self):
         message = "{:<15} {:<15} {:<30} {:<15}".format("Index", "From", "DateTime", "Title")
@@ -263,17 +271,17 @@ class server:
     #Get date and time and insert into list
     def getDateAndTime(self, emailList):
         dateAndTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-        time = "Time and Date: " + str(dateAndTime) + "\n"
+        time = "Time and Date: " + str(dateAndTime)
         emailList.insert(2, time)
 
     #Create email based on client messages
     def createMessage(self, size):
         message = ""
-        total = 0
         email = self.receiveMessageASCII(2048)
         message += email
+        total = sys.getsizeof(email)
         while total < int(size):
-            total += len(email)
+            total += sys.getsizeof(email)
             email = self.receiveMessageASCII(2048)
             message += email
         return message
