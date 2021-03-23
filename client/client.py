@@ -31,9 +31,6 @@ class client:
             print('Error in client socket creation:',e)
             sys.exit(1)
 
-        self.uname = input("Enter your username: ")
-        self.passwrd = input("Enter your password: ")   
-
     # Ask user for server name and then connect to the server
     # Handles user input and sending input to the server
     def start(self):
@@ -49,6 +46,9 @@ class client:
             self.clientSocket.close()
             sys.exit(1)
 
+        #uname = input("Enter your username: ")
+        #passwrd = input("Enter your password: ")
+    
         while connected:
             try:
                 message = self.receiveMessageASCII(2048)
