@@ -18,7 +18,6 @@ class client:
     # Initialize operating system requirements
     # Requirements: Create socket
     def __init__(self):
-
         try:
             # Get a socket from the operating system
             self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -26,6 +25,9 @@ class client:
         except socket.error as e:
             print('Error in client socket creation:',e)
             sys.exit(1)
+
+        # Added username here
+        self._username = ""
 
     # Ask user for server name and then connect to the server
     # Handles user input and sending input to the server
@@ -45,8 +47,8 @@ class client:
         try:
             # Username chain
             message = self.receiveMessageASCII(2048)
-            username = input(message)
-            self.sendMessageASCII(username)
+            self._username = input(message)
+            self.sendMessageASCII(self._username)
             # Password chain
             message = self.receiveMessageASCII(2048)
             password = input(message)
@@ -74,6 +76,7 @@ class client:
 
                 elif option == 2:
                     self.viewInbox()
+                    continue
 
                 elif option == 3:
                     self.viewEmail()
@@ -98,27 +101,28 @@ class client:
             message = self.getMessage()
             email = self.createEmail(to, title, message)
 
-            #send the size of the email to the server
+            # Send the size of the email to the server
             size = sys.getsizeof(email)
             self.sendMessageASCII(str(size))
 
-            #send the email to the server
-            self.clientSocket.sendall(email)
+            # Send the email to the server
+            self.clientSocket.sendall(email.encode("ascii"))
             #self.sendSegments(size, email)
             
         else:
             self.readFile(to, title)
-            
 
     def viewInbox(self):
-        pass;        
+        message = self.receiveMessageASCII(2048)
+        print(message)
+        self.sendMessageASCII("OK")
 
     def viewEmail(self):
         pass
 
     #Create the email that will be sent to the server
     def createEmail(self, to, title, message):
-        email = "From: " + self.uname + "\nTo: " + to + "\nTitle: " + title + "\nContent Length: " + str(len(message))\
+        email = "From: " + self._username + "\nTo: " + to + "\nTitle: " + title + "\nContent Length: " + str(len(message))\
             + "\nContent: \n" + message
         return email
 
@@ -141,25 +145,22 @@ class client:
         filename = input("Enter filename: ")
         filename = filename.strip()
         try:
-            f = open(filename, "r")
-            message = f.read()
-            if(len(message) > 1000000):
-                f.close()
-                print("Message is too long!\n")
-            else:
-                email = self.createEmail(to, title, message)
-                f.close()
+            with open(filename, "r") as f:
+                message = f.read()
+                if(len(message) > 1000000):
+                    print("Message is too long!\n")
+                else:
+                    email = self.createEmail(to, title, message)
+                    # Send the size of the email to the server
+                    size = sys.getsizeof(email)
+                    self.sendMessageASCII(str(size))
 
-                #send the size of the email to the server
-                size = sys.getsizeof(email)
-                self.sendMessageASCII(str(size))
-
-                #send the email to the server
-                self.clientSocket.sendall(email)
-                #self.sendSegments(size, email)
+                    # Send the email to the server
+                    self.clientSocket.sendall(email.encode('ascii'))
+                    #self.sendSegments(size, email)
 
         except FileNotFoundError:
-                print("File does not exist")
+            print("File does not exist.")
 
     #Get the choice of message
     def getChoice(self):

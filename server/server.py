@@ -64,6 +64,7 @@ class server:
         try:
             # create socket
             self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         except socket.error as e:
             print('Error in server socket creation: ', e)
@@ -75,55 +76,18 @@ class server:
         except socket.error as e:
             print('Error in server socket binding: ', e)
             sys.exit(1)
+
+        self._client = ""
     
     # starts listening on the socket and handles input from client
     def start(self):
-        optionsMessage = "\nSelect the operation:\n1) Create and send an email\n2) Display the inbox list\n3) Display the email contents\n4) Terminate the connection\n\nChoice: "
         while 1:
             try:
                 self.waitForConnection()
-                self.sendMessageASCII("Welcome to our system.\nEnter your username: ")
-
-                username = self.receiveMessageASCII(2048)
-                if username != "user1":
-                    self.sendMessageASCII("Incorrect username. Connection Terminated.")
-                    self.terminateClient()
-                    continue
-
-                self.sendMessageASCII("Enter your password: ")
-
-                password = self.receiveMessageASCII(2048)
                 
-                self.sendMessageASCII(optionsMessage)
-
-                while self.clientConnected:
-
-                    message = self.receiveMessageASCII(2048)
-                    if not message.isdigit():
-                        self.sendMessageASCII("Error: not a number\n\n"+optionsMessage)
-                        continue
-                    
-                    message = int(message)
-
-                    if message == 1:
-                        self.sendEmail()
-
-                    elif message == 2:
-                        self.viewInbox()
-
-                    elif message == 3:
-                        self.viewEmail()
-
-                    elif message == 4:
-                        self.terminateClient()
-                        continue
-                        
-                    else:
-                        print(message)
-                        self.sendMessageASCII("Invalid Option\n"+optionsMessage)
-                        continue
-
-                    self.sendMessageASCII(optionsmessage)
+                pid = os.fork()
+                if pid == 0:
+                    self.handleConnection()
 
             # these exceptions kept getting thrown when the
             # client experienced its own error. simply terminate
@@ -133,6 +97,59 @@ class server:
 
             except ConnectionResetError:
                 self.terminateClient()
+
+    def handleConnection(self):
+        optionsMessage = "\nSelect the operation:\n1) Create and send an email\n2) Display the inbox list\n3) Display the email contents\n4) Terminate the connection\n\nChoice: "
+        self.sendMessageASCII("Welcome to our system.\nEnter your username: ")
+
+        username = self.receiveMessageASCII(2048)
+        if username != "client1":
+            self.sendMessageASCII("Incorrect username. Connection Terminated.")
+            self.terminateClient()
+        
+        # Assign the client username to access the email directories
+        self._client = username
+
+        self.sendMessageASCII("Enter your password: ")
+        password = self.receiveMessageASCII(2048)
+        
+        self.sendMessageASCII(optionsMessage)
+
+        while self.clientConnected:
+            message = self.receiveMessageASCII(2048)
+
+            if message == "OK":
+                self.sendMessageASCII(optionsMessage)
+                continue
+
+            if not message.isdigit():
+                self.sendMessageASCII("Error: not a number\n\n" + optionsMessage)
+                continue
+            
+            message = int(message)
+
+            if message == 1:
+                self.sendEmail()
+
+            elif message == 2:
+                self.viewInbox()
+                continue
+
+            elif message == 3:
+                self.viewEmail()
+
+            elif message == 4:
+                self.terminateClient()
+                continue
+                
+            else:
+                print(message)
+                self.sendMessageASCII("Invalid Option\n" + optionsMessage)
+                continue
+
+            self.sendMessageASCII(optionsMessage)
+
+        os._exit(0)
 
     #Process the email sent by the client
     def sendEmail(self):
@@ -174,10 +191,43 @@ class server:
                         f.write(emailSplit.join())
 
     def viewInbox(self):
-        pass
+        message = "{:<15} {:<15} {:<30} {:<15}".format("Index", "From", "DateTime", "Title")
+
+        emails = self.buildEmailList()
+        sortedEmails = self.sortEmails(emails)
+
+        for i, email in enumerate(sortedEmails):
+            message = "{}\n{:<15} {:<15} {:<30} {:<15}".format(message, str(i+1), str(email["From"]), str(email["DateTime"]), str(email["Title"]))
+
+        self.sendMessageASCII(message)
 
     def viewEmail(self):
         pass
+
+    def sortEmails(self, emails):
+        emailContents = []
+
+        for email in emails:
+            with open (email, "r") as e:
+                entry = {}
+                lines = e.readlines()
+                # Assign file values
+                entry["From"] = lines[0].split(':')[1].strip()
+                entry["DateTime"] = ''.join(lines[2].split(':')[1:]).strip()
+                entry["Title"] = lines[3].split(':')[1].strip()
+                entry["FileName"] = email
+                emailContents.append(entry)
+
+        return sorted(emailContents, key=lambda k: k['DateTime'])
+
+    def buildEmailList(self):
+        emails = []
+
+        for f in os.listdir(self._client):
+            if f.endswith(".txt"):
+                emails.append(os.path.join(self._client, f))
+
+        return emails
 
     #create the confirmation message that the email was recieved
     def createReceiveMessage(self, sender, to, size):
@@ -189,7 +239,6 @@ class server:
                 m += to[i] + ";"
         m += " has a content length of " + size + ".\n"
         print(m)
-
 
     #Get date and time and insert into list
     def getDateAndTime(self, emailList):
