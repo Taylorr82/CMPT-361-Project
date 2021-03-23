@@ -46,9 +46,14 @@ class client:
             self.clientSocket.close()
             sys.exit(1)
 
-        print(self.receiveMessageASCII(2048))
-        uname = input()
-        self.sendMessageASCII(uname)
+        uname = input("Enter your username: ")
+        passwrd = input("Enter your password: ")
+
+        
+
+        #print(self.receiveMessageASCII(2048))
+        #uname = input()
+        #self.sendMessageASCII(uname)
 
         while connected:
             try:
