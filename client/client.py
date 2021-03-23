@@ -1,10 +1,6 @@
-"""
-    Client program for CMPT361 File server
-
-    Handles sending commands and data to the file server
-
-    Author: Robert Taylor
-"""
+# CMPT361 - Project
+# MacEwan University
+# Authors: Robert Taylor, Jayden Laturnus, Braden Simmons
 
 import sys
 import socket
@@ -22,7 +18,6 @@ class client:
     # Initialize operating system requirements
     # Requirements: Create socket
     def __init__(self):
-
         try:
             # Get a socket from the operating system
             self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -30,6 +25,9 @@ class client:
         except socket.error as e:
             print('Error in client socket creation:',e)
             sys.exit(1)
+
+        # Added username here
+        self._username = ""
 
     # Ask user for server name and then connect to the server
     # Handles user input and sending input to the server
@@ -42,25 +40,31 @@ class client:
             connected = True
         
         except socket.error as e:
-            print('An error occured:',e)
+            print('An error occured: ', e)
             self.clientSocket.close()
             sys.exit(1)
 
-        #uname = input("Enter your username: ")
-        #passwrd = input("Enter your password: ")
-    
-        while connected:
-            try:
+        try:
+            # Username chain
+            message = self.receiveMessageASCII(2048)
+            self._username = input(message)
+            self.sendMessageASCII(self._username)
+            # Password chain
+            message = self.receiveMessageASCII(2048)
+            password = input(message)
+            self.sendMessageASCII(password)
+
+            # Enter option loop
+            while connected:
                 message = self.receiveMessageASCII(2048)
-                print(message)
-                if "Terminated" in message:
+
+                if "Invalid username or password.\nTerminating.\n" in message:
                     self.terminate()
 
-                option = input()
+                option = input(message)
 
                 while (len(option) == 0) or (not option.isdigit()):
-                    print("invalid option. Please try again: ")
-                    option=input()
+                    option = input("Invalid option. Please try again: ")
 
                 self.sendMessageASCII(option)
 
@@ -72,6 +76,7 @@ class client:
 
                 elif option == 2:
                     self.viewInbox()
+                    continue
 
                 elif option == 3:
                     self.viewEmail()
@@ -82,10 +87,10 @@ class client:
                 else:
                     continue
 
-            except socket.error:
-                print("unknown socket error")
-                self.clientSocket.close()
-                sys.exit(1)
+        except socket.error:
+            print("unknown socket error")
+            self.clientSocket.close()
+            sys.exit(1)
 
     def sendEmail(self):
         m = self.receiveMessageASCII(2048)
@@ -96,27 +101,34 @@ class client:
             message = self.getMessage()
             email = self.createEmail(to, title, message)
 
-            #send the size of the email to the server
+            # Send the size of the email to the server
             size = sys.getsizeof(email)
             self.sendMessageASCII(str(size))
 
-            #send the email to the server
-            self.clientSocket.sendall(email)
+            # Send the email to the server
+            self.clientSocket.sendall(email.encode("ascii"))
             #self.sendSegments(size, email)
             
         else:
             self.readFile(to, title)
-            
 
     def viewInbox(self):
-        pass;        
+        message = self.receiveMessageASCII(2048)
+        print(message)
+        self.sendMessageASCII("OK")
 
     def viewEmail(self):
-        pass
+        message = self.receiveMessageASCII(2048)
+        index = input(message)
+        self.sendMessageASCII(str(index))
+        # Receive email contents
+        message = self.receiveMessageASCII(2048)
+        print(message)
+        self.sendMessageASCII("OK")
 
     #Create the email that will be sent to the server
     def createEmail(self, to, title, message):
-        email = "From: " + self.uname + "\nTo: " + to + "\nTitle: " + title + "\nContent Length: " + str(len(message))\
+        email = "From: " + self._username + "\nTo: " + to + "\nTitle: " + title + "\nContent Length: " + str(len(message))\
             + "\nContent: \n" + message
         return email
 
@@ -139,25 +151,22 @@ class client:
         filename = input("Enter filename: ")
         filename = filename.strip()
         try:
-            f = open(filename, "r")
-            message = f.read()
-            if(len(message) > 1000000):
-                f.close()
-                print("Message is too long!\n")
-            else:
-                email = self.createEmail(to, title, message)
-                f.close()
+            with open(filename, "r") as f:
+                message = f.read()
+                if(len(message) > 1000000):
+                    print("Message is too long!\n")
+                else:
+                    email = self.createEmail(to, title, message)
+                    # Send the size of the email to the server
+                    size = sys.getsizeof(email)
+                    self.sendMessageASCII(str(size))
 
-                #send the size of the email to the server
-                size = sys.getsizeof(email)
-                self.sendMessageASCII(str(size))
-
-                #send the email to the server
-                self.clientSocket.sendall(email)
-                #self.sendSegments(size, email)
+                    # Send the email to the server
+                    self.clientSocket.sendall(email.encode('ascii'))
+                    #self.sendSegments(size, email)
 
         except FileNotFoundError:
-                print("File does not exist")
+            print("File does not exist.")
 
     #Get the choice of message
     def getChoice(self):
