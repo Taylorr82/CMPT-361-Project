@@ -159,37 +159,65 @@ class server:
         #get size from client
         size = self.receiveMessageASCII(2048)
 
-        #create the email
-        message = self.createMessage(size)
-        emailSplit = message.split("\n")
+        if("Invalid File!" in size or "Message is too long!" in size):
+            print("Invalid Message!")
 
-        #who is the message from
-        emailFromSplit = emailSplit[0].split()
-        emailFrom = emailFromSplit[1]
+        else:
+            #create the email
+            message = self.createMessage(size)
+            emailSplit = message.split("\n")
 
-        #the title of the email
-        emailTitleSplit = emailSplit[2].split()
-        emailTitle = emailTitleSplit[1]
+            #who is the message from
+            emailFromSplit = emailSplit[0].split()
+            emailFrom = emailFromSplit[1]
 
-        #who is the email for
-        to = emailSplit[0].split()
-        names = to[1].split(";")
+            #Content
+            emailContent = emailSplit[len(emailSplit) - 1]
 
-        #print the message that the email was recieved
-        self.createReceiveMessage(emailFrom, names, size)
+            #the title of the email
+            emailTitleSplit = emailSplit[2].split()
+            emailTitle = emailTitleSplit[1]
 
-        #insert date and time into the email
-        self.getDateAndTime(emailSplit)
+            if(len(emailTitle) > 100 or len(emailContent) > 1000000):
+                print("Invalid Message!")
 
-        #create file and save to directory
-        for i in range(len(names)):
-            fileName = emailFrom + "_" + emailTitle + ".txt"
-            cwd = os.getcwd()
-            for name in glob.glob(cwd + "\*"):
-                if names[i] in name:
-                    path = os.path.join(name, fileName)
-                    with open(path, "w") as f:
-                        f.write(emailSplit.join())
+            else:
+                #who is the email for
+                to = emailSplit[1].split()
+                names = ""
+                if(len(to) > 1):
+                    if(";" in to[1]):
+                        names = to[1].split(";")
+                    else:
+                        names = [to[1]]
+                else:
+                    names = " "
+
+                flag = 0
+                for name in names:
+                    if name.lower() == "client1" or name.lower() == "client2" or name.lower() == "client3" or name.lower() == "client4" or name.lower() == "client5":
+                        if(flag == 0):
+                            #print the message that the email was recieved
+                            self.createReceiveMessage(emailFrom, names, len(emailContent))
+                            flag = 1
+
+                        #insert date and time into the email
+                        self.getDateAndTime(emailSplit)
+
+                        temp = ""
+                        fileName = emailFrom + "_" + emailTitle + ".txt"
+                        cwd = os.getcwd()
+                        for globName in glob.glob(cwd + "/*"):
+                            if name.lower() in globName:
+                                path = os.path.join(globName, fileName)
+                                f = open(path, "w")
+                                for elem in emailSplit:
+                                    temp += elem + "\n"
+                                f.write(temp)
+                                f.close()
+                    else:
+                        print(name + " is an invalid recipient!")
+                        
 
     def viewInbox(self):
         message = "{:<15} {:<15} {:<30} {:<15}".format("Index", "From", "DateTime", "Title")
@@ -257,23 +285,23 @@ class server:
                 m += to[i]
             else:
                 m += to[i] + ";"
-        m += " has a content length of " + size + ".\n"
+        m += " has a content length of " + str(size) + ".\n"
         print(m)
 
     #Get date and time and insert into list
     def getDateAndTime(self, emailList):
         dateAndTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-        time = "Time and Date: " + str(dateAndTime) + "\n"
+        time = "Time and Date: " + str(dateAndTime)
         emailList.insert(2, time)
 
     #Create email based on client messages
     def createMessage(self, size):
         message = ""
-        total = 0
         email = self.receiveMessageASCII(2048)
         message += email
+        total = sys.getsizeof(email)
         while total < int(size):
-            total += len(email)
+            total += sys.getsizeof(email)
             email = self.receiveMessageASCII(2048)
             message += email
         return message
