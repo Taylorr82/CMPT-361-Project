@@ -167,36 +167,48 @@ class server:
         emailFromSplit = emailSplit[0].split()
         emailFrom = emailFromSplit[1]
 
+        #Content
+        emailContent = emailSplit[len(emailSplit) - 1]
+
         #the title of the email
         emailTitleSplit = emailSplit[2].split()
         emailTitle = emailTitleSplit[1]
 
         #who is the email for
         to = emailSplit[1].split()
-        if(";" in to[1]):
-            names = to[1].split(";")
+        names = ""
+        if(len(to) > 1):
+            if(";" in to[1]):
+                names = to[1].split(";")
+            else:
+                names = [to[1]]
         else:
-            names = [to[1]]
+            names = " "
 
-        #print the message that the email was recieved
-        self.createReceiveMessage(emailFrom, names, size)
+        flag = 0
+        for name in names:
+            if name.lower() == "client1" or name.lower() == "client2" or name.lower() == "client3" or name.lower() == "client4" or name.lower() == "client5":
+                if(flag == 0):
+                    #print the message that the email was recieved
+                    self.createReceiveMessage(emailFrom, names, len(emailContent))
+                    flag = 1
 
-        #insert date and time into the email
-        self.getDateAndTime(emailSplit)
+                #insert date and time into the email
+                self.getDateAndTime(emailSplit)
 
-        #create file and save to directory
-        for i in range(len(names)):
-            temp = ""
-            fileName = emailFrom + "_" + emailTitle + ".txt"
-            cwd = os.getcwd()
-            for name in glob.glob(cwd + "/*"):
-                if names[i] in name:
-                    path = os.path.join(name, fileName)
-                    f = open(path, "w")
-                    for elem in emailSplit:
-                        temp += elem + "\n"
-                    f.write(temp)
-                    f.close()
+                temp = ""
+                fileName = emailFrom + "_" + emailTitle + ".txt"
+                cwd = os.getcwd()
+                for globName in glob.glob(cwd + "/*"):
+                    if name.lower() in globName:
+                        path = os.path.join(globName, fileName)
+                        f = open(path, "w")
+                        for elem in emailSplit:
+                            temp += elem + "\n"
+                        f.write(temp)
+                        f.close()
+            else:
+                print(name + " is an invalid recipient!")
                         
 
     def viewInbox(self):
@@ -265,7 +277,7 @@ class server:
                 m += to[i]
             else:
                 m += to[i] + ";"
-        m += " has a content length of " + size + ".\n"
+        m += " has a content length of " + str(size) + ".\n"
         print(m)
 
     #Get date and time and insert into list
