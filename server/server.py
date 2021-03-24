@@ -16,7 +16,6 @@ from Crypto.Util.Padding import pad, unpad
 class server:
     serverPort = 13000
 
-    clientConnected = False
     clientConnectionSocket = None
     clientAddr = None
 
@@ -309,13 +308,11 @@ class server:
     # Terminate client connection
     def terminateClient(self):
         self.clientConnectionSocket.close()
-        self.clientConnected = False
 
     # blocks waiting for client to connect
     def waitForConnection(self):
         self.serverSocket.listen(0)
         self.clientConnectionSocket, self.clientAddr = self.serverSocket.accept()
-        self.clientConnected = True
 
     #send a message to the client encoded as ascii
     def sendMessageASCII(self, message):
