@@ -107,7 +107,7 @@ class client:
 
             # Send the email to the server
             self.clientSocket.sendall(email.encode("ascii"))
-            #self.sendSegments(size, email)
+            print("The message is sent to the server\n")
             
         else:
             self.readFile(to, title)
@@ -132,13 +132,6 @@ class client:
             + "\nContent: \n" + message
         return email
 
-    #send the contents to the server
-    def sendSegments(self, size, contents):
-        total = 0
-        while total < size:
-            s = self.clientSocket.send(contents.encode("ascii"))
-            total += s
-
     #Get the title of the email
     def getTitle(self):
         title = input("Enter title: ")
@@ -151,22 +144,27 @@ class client:
         filename = input("Enter filename: ")
         filename = filename.strip()
         try:
-            with open(filename, "r") as f:
-                message = f.read()
-                if(len(message) > 1000000):
-                    print("Message is too long!\n")
-                else:
-                    email = self.createEmail(to, title, message)
-                    # Send the size of the email to the server
-                    size = sys.getsizeof(email)
-                    self.sendMessageASCII(str(size))
+            f = open(filename, "r")
+            message = f.read()
+            if(len(message) > 1000000):
+                print("Message is too long!\n")
+                self.sendMessageASCII("Message is too long!")
+                f.close()
 
-                    # Send the email to the server
-                    self.clientSocket.sendall(email.encode('ascii'))
-                    #self.sendSegments(size, email)
+            else:
+                email = self.createEmail(to, title, message)
+                # Send the size of the email to the server
+                size = sys.getsizeof(email)
+                self.sendMessageASCII(str(size))
+
+                # Send the email to the server
+                self.clientSocket.sendall(email.encode('ascii'))
+                f.close()
+                print("The message is sent to the server\n")
 
         except FileNotFoundError:
             print("File does not exist.")
+            self.sendMessageASCII("Invalid File!")
 
     #Get the choice of message
     def getChoice(self):
