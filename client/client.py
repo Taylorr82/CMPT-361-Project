@@ -148,7 +148,6 @@ class Client:
 
             # Send the email to the server
             self.sendMessageASCII(email)
-            #self._clientSocket.sendall(email.encode("ascii"))
             print("The message is sent to the server\n")
             
         else:
@@ -200,7 +199,7 @@ class Client:
                 self.sendMessageASCII(str(size))
 
                 # Send the email to the server
-                self._clientSocket.sendall(email.encode('ascii'))
+                self.sendall(email)
                 f.close()
                 print("The message is sent to the server\n")
 
