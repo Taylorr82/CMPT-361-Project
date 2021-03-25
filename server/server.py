@@ -49,27 +49,24 @@ class Server:
             sys.exit(1)
 
         try:
-            k = open("server_private.pem", "rb")
-            key = RSA.importKey(k.read())
-            self._privateCipher = PKCS1_OAEP.new(key)
-            k.close()
+            with open("server_private.pem", "rb") as k:
+                key = RSA.importKey(k.read())
+                self._privateCipher = PKCS1_OAEP.new(key)
         except:
             print("Couldn't open server private key")
             sys.exit(1)
 
         try:
-            k = open("server_public.pem", "rb")
-            key = RSA.importKey(k.read())
-            self._publicCipher = PKCS1_OAEP.new(key)
-            k.close()
+            with open("server_public.pem", "rb") as k:
+                key = RSA.importKey(k.read())
+                self._publicCipher = PKCS1_OAEP.new(key)
         except:
             print("Couldn't open server public key")
             sys.exit(1)
 
         try:
-            d = open("user_pass.json", 'r')
-            self._database = json.loads(d.read())
-            d.close()
+            with open("user_pass.json", 'r') as d:
+                self._database = json.loads(d.read())
         except:
             print("Couldn't open user_pass.json")
             sys.exit(1)
@@ -103,8 +100,8 @@ class Server:
 
         if (self._client in self._database) and (password == self._database[self._client]):
             try:
-                client_pub = open("{}_public.pem".format(self._client, 'r'))
-                cipher = PKCS1_OAEP.new(RSA.import_key(client_pub.read()))
+                with open("{}_public.pem".format(self._client, 'r')) as client_pub:
+                    cipher = PKCS1_OAEP.new(RSA.import_key(client_pub.read()))
             except:
                 print("Failed to open public key")
                 sys.exit(1)
