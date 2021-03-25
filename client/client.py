@@ -235,6 +235,11 @@ class Client:
         encoded_message = unpad(padded_message,16)
         return encoded_message.decode('ascii')
 
+    # wraps Socket.sendall() with encryption
+    def sendall(self, message):
+        enc_message = self._symCipher.encrypt(pad(message.encode('ascii'), 16))
+        self._clientSocket.sendall(enc_message)
+
     # terminate client protocol
     # Exits upon socket closure
     def terminate(self):
