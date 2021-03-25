@@ -217,13 +217,14 @@ class Server:
                         fileName = emailFrom + "_" + emailTitle + ".txt"
                         cwd = os.getcwd()
                         for globName in glob.glob(cwd + "/*"):
-                            if name.lower() in globName:
-                                path = os.path.join(globName, fileName)
-                                f = open(path, "w")
-                                for elem in emailSplit:
-                                    temp += elem + "\n"
-                                f.write(temp)
-                                f.close()
+                            if ".pem" not in globName:
+                                if name.lower() in globName:
+                                    path = os.path.join(globName, fileName)
+                                    f = open(path, "w")
+                                    for elem in emailSplit:
+                                        temp += elem + "\n"
+                                    f.write(temp)
+                                    f.close()
                     else:
                         print(name + " is an invalid recipient!")
                         
@@ -294,7 +295,7 @@ class Server:
                 m += to[i]
             else:
                 m += to[i] + ";"
-        m += " has a content length of " + str(size) + ".\n"
+        m += " has a content length of " + str(size) + "."
         print(m)
 
     #Get date and time and insert into list
