@@ -37,10 +37,9 @@ class Client:
             sys.exit(1)
 
         try:
-            k = open("server_public.pem", "rb")
-            key = RSA.importKey(k.read())
-            self._serverCipher = PKCS1_OAEP.new(key)
-            k.close()
+            with open("server_public.pem", "rb") as k:
+                key = RSA.importKey(k.read())
+                self._serverCipher = PKCS1_OAEP.new(key)
 
         except:
             print("Couldn't read server key")
@@ -50,21 +49,20 @@ class Client:
     # Handles user input and sending input to the server
     def start(self):
         self._serverName = input("Enter the server name or IP address: ")
-
-    
         self._userName = input("Enter your username: ")
         password = input("Enter your password: ")
+
         try:
-            k = open("{}_private.pem".format(self._userName), "rb")
-            key = RSA.importKey(k.read())
-            self._clientCipher = PKCS1_OAEP.new(key)
-            k.close()
+            with open("{}_private.pem".format(self._userName), "rb") as k:
+                key = RSA.importKey(k.read())
+                self._clientCipher = PKCS1_OAEP.new(key)
+
         except:
             print("Couldn't open client private key")
             sys.exit(1)
 
         try:
-            #Client connect with the server
+            # Client connect with the server
             self._clientSocket.connect((self._serverName,self._serverPort))
         
         except socket.error as e:
@@ -78,14 +76,14 @@ class Client:
             d["password"] = password
             message = json.dumps(d)
 
-            # encrypt username and password then send
+            # Encrypt username and password then send
             enc_message = self._serverCipher.encrypt(message.encode("ascii"))
-
             self._clientSocket.send(enc_message)
 
-            # receive symmetric key
+            # Receive symmetric key
             ekey = self._clientSocket.recv(2048)
-            try: # if it can decode ascii it's clearly not a key
+            # If it can decode ascii it's clearly not a key
+            try:
                 ekey = ekey.decode('ascii')
                 print(ekey)
                 self.terminate()
@@ -102,12 +100,10 @@ class Client:
                 message = self.receiveMessageASCII(2048)
 
                 option = input(message)
-
                 while (len(option) == 0) or (not option.isdigit()):
                     option = input("Invalid option. Please try again: ")
 
                 self.sendMessageASCII(option)
-
                 option = int(option)
 
                 if option == 1:
@@ -128,7 +124,7 @@ class Client:
                     continue
 
         except socket.error:
-            print("unknown socket error")
+            print("Unknown socket error.")
             self._clientSocket.close()
             sys.exit(1)
 
@@ -181,41 +177,39 @@ class Client:
             title = input("Too many characters! Enter title: ")
         return title
 
-    #send a message based on a file
+    # Send a message based on a file
     def readFile(self, to, title):
         filename = input("Enter filename: ")
         filename = filename.strip()
         try:
-            f = open(filename, "r")
-            message = f.read()
-            if(len(message) > 1000000):
-                print("Message is too long!\n")
-                self.sendMessageASCII("Message is too long!")
-                f.close()
+            with open(filename, "r") as f:
+                message = f.read()
+                if(len(message) > 1000000):
+                    print("Message is too long!\n")
+                    self.sendMessageASCII("Message is too long!")
 
-            else:
-                email = self.createEmail(to, title, message)
-                # Send the size of the email to the server
-                size = sys.getsizeof(email)
-                self.sendMessageASCII(str(size))
+                else:
+                    email = self.createEmail(to, title, message)
+                    # Send the size of the email to the server
+                    size = sys.getsizeof(email)
+                    self.sendMessageASCII(str(size))
 
-                # Send the email to the server
-                self._clientSocket.sendall(email.encode('ascii'))
-                f.close()
-                print("The message is sent to the server\n")
+                    # Send the email to the server
+                    self._clientSocket.sendall(email.encode('ascii'))
+                    print("The message is sent to the server\n")
 
         except FileNotFoundError:
             print("File does not exist.")
             self.sendMessageASCII("Invalid File!")
 
-    #Get the choice of message
+    # Get the choice of message
     def getChoice(self):
         choice = input("Would you like to load the contents from a file (Y/N): ")
         while choice.lower() != "y" and choice.lower() != "n":
             choice = input("Would you like to load the contents from a file (Y/N): ")
         return choice
 
-    #Get the message
+    # Get the message
     def getMessage(self):
         message = input("Enter message contents: ")
         while len(message) > 1000000:
@@ -227,15 +221,15 @@ class Client:
         ct_bytes = self._symCipher.encrypt(pad(message.encode('ascii'),16))
         self._clientSocket.send(ct_bytes)
 
-    # recieve a message and decode as ascii up to size
+    # Recieve a message and decode as ascii up to size
     def receiveMessageASCII(self, size):
         enc_message = self._clientSocket.recv(size)
         padded_message = self._symCipher.decrypt(enc_message)
-        #Remove padding
+        # Remove padding
         encoded_message = unpad(padded_message,16)
         return encoded_message.decode('ascii')
 
-    # wraps Socket.sendall() with encryption
+    # Wraps Socket.sendall() with encryption
     def sendall(self, message):
         enc_message = self._symCipher.encrypt(pad(message.encode('ascii'), 16))
         self._clientSocket.sendall(enc_message)
@@ -246,7 +240,6 @@ class Client:
         print("Connection Terminated")
         self._clientSocket.close()
         sys.exit(1)
-
 
 def main():
     c = Client()

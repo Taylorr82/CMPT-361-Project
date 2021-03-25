@@ -15,9 +15,9 @@ from Crypto.Util.Padding import pad, unpad
 from Crypto.PublicKey import RSA
 
 class Server:
-    # initialize operating system requirements
+    # Initialize operating system requirements
     # Requirements: bind socket,
-    # does not start listening on the socket
+    # Does not start listening on the socket
     def __init__(self):
         self._serverPort = 13000
         self._client = ""
@@ -161,7 +161,7 @@ class Server:
 
         os._exit(0)
 
-    #Process the email sent by the client
+    # Process the email sent by the client
     def sendEmail(self):
         self.sendMessageASCII("Send the email")
 
@@ -172,18 +172,15 @@ class Server:
             print("Invalid Message!")
 
         else:
-            #create the email
+            # Create the email
             message = self.createMessage(size)
             emailSplit = message.split("\n")
 
-            #who is the message from
+            # Who is the message from
             emailFromSplit = emailSplit[0].split()
             emailFrom = emailFromSplit[1]
 
-            #Content
             emailContent = emailSplit[len(emailSplit) - 1]
-
-            #the title of the email
             emailTitleSplit = emailSplit[2].split()
             emailTitle = emailTitleSplit[1]
 
@@ -191,7 +188,7 @@ class Server:
                 print("Invalid Message!")
 
             else:
-                #who is the email for
+                # Who is the email for
                 to = emailSplit[1].split()
                 names = ""
                 if(len(to) > 1):
@@ -204,13 +201,13 @@ class Server:
 
                 flag = 0
                 for name in names:
-                    if name.lower() == "client1" or name.lower() == "client2" or name.lower() == "client3" or name.lower() == "client4" or name.lower() == "client5":
+                    if name.lower() in self._database:
                         if(flag == 0):
-                            #print the message that the email was recieved
+                            # Print the message that the email was recieved
                             self.createReceiveMessage(emailFrom, names, len(emailContent))
                             flag = 1
 
-                        #insert date and time into the email
+                        # Insert date and time into the email
                         self.getDateAndTime(emailSplit)
 
                         temp = ""
@@ -219,14 +216,12 @@ class Server:
                         for globName in glob.glob(cwd + "/*"):
                             if name.lower() in globName:
                                 path = os.path.join(globName, fileName)
-                                f = open(path, "w")
-                                for elem in emailSplit:
-                                    temp += elem + "\n"
-                                f.write(temp)
-                                f.close()
+                                with open(path, "w") as f:
+                                    for elem in emailSplit:
+                                        temp += elem + "\n"
+                                    f.write(temp)
                     else:
                         print(name + " is an invalid recipient!")
-                        
 
     def viewInbox(self):
         message = "{:<15} {:<15} {:<30} {:<15}".format("Index", "From", "DateTime", "Title")
@@ -286,7 +281,7 @@ class Server:
 
         return emails
 
-    #create the confirmation message that the email was recieved
+    # Create the confirmation message that the email was recieved
     def createReceiveMessage(self, sender, to, size):
         m = "An email from " + sender + " is sent to "
         for i in range(len(to)):
@@ -297,13 +292,13 @@ class Server:
         m += " has a content length of " + str(size) + ".\n"
         print(m)
 
-    #Get date and time and insert into list
+    # Get date and time and insert into list
     def getDateAndTime(self, emailList):
         dateAndTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         time = "Time and Date: " + str(dateAndTime)
         emailList.insert(2, time)
 
-    #Create email based on client messages
+    # Create email based on client messages
     def createMessage(self, size):
         message = ""
         email = self.receiveMessageASCII(2048)
@@ -319,7 +314,7 @@ class Server:
     def terminateClient(self):
         self._clientConnectionSocket.close()
 
-    # blocks waiting for client to connect
+    # Blocks waiting for client to connect
     def waitForConnection(self):
         self._serverSocket.listen(0)
         self._clientConnectionSocket, self._clientAddr = self._serverSocket.accept()
@@ -329,11 +324,11 @@ class Server:
         ct_bytes = self.symCipher.encrypt(pad(message.encode('ascii'),16))
         self._clientConnectionSocket.send(ct_bytes)
 
-    # recieve a message and decode as ascii up to size
+    # Recieve a message and decode as ascii up to size
     def receiveMessageASCII(self, size):
         enc_message = self._clientConnectionSocket.recv(size)
         padded_message = self.symCipher.decrypt(enc_message)
-        #Remove padding
+        # Remove padding
         encoded_message = unpad(padded_message,16)
         return encoded_message.decode('ascii')
 
