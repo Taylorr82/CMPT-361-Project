@@ -9,62 +9,33 @@ import datetime
 import glob
 import os
 
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
+from Crypto.PublicKey import RSA
 
-class server:
-    serverPort = 13000
-
-    clientConnected = False
-    clientConnectionSocket = None
-    clientAddr = None
-
-    """ Dictionary is formatted as follows: {"filename": {"size":size, "time":time}}"""
-    database = None
-
-    databaseFile = None
-
-    serverSocket = None
-
+class Server:
     # initialize operating system requirements
     # Requirements: bind socket,
     # does not start listening on the socket
     def __init__(self):
+        self._serverPort = 13000
+        self._client = ""
+        self._clientConnectionSocket = None
+        self._clientAddr = None
 
-        '''try:
-            self.databaseFile = open("Database.json", "r+")
-            self.database = json.load(self.databaseFile)
+        # Dictionary is formatted as follows: { "client{}": password )
+        self._database = None
+        self._serverSocket = None
 
-        
-        except Exception as e: 
-            print(e)
-            print("Error opening Database.json")
-            print("Assuming database empty. Continuing with new one")
-            self.database = dict()
-            try:
-                self.databaseFile.close()
-            except:
-                pass
-
-            privateKeyLen = 256
-            privateKey = get_random_bytes(int(privateKeyLen/8))
-            cipherPrivate = AES.new(privateKey, AES.MODE_ECB)
-            private = open("server_public.pem", "w")
-            private.write(cipherPrivate)
-            private.close()
-
-            publicKeyLen = 256
-            publicKey = get_random_bytes(int(publicKeyLen/8))
-            cipherPublic = AES.new(publicKey, AES.MODE_ECB)
-            public = open("server_public.pem", "w")
-            public.write(cipherPublic)
-            public.close()'''
+        self._privateCipher = None
+        self._publicCipher = None
+        self._symkey = None
 
         try:
             # create socket
-            self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self._serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         except socket.error as e:
             print('Error in server socket creation: ', e)
@@ -72,12 +43,36 @@ class server:
         
         # bind port to socket
         try:
-            self.serverSocket.bind(('', self.serverPort))
+            self._serverSocket.bind(('', self._serverPort))
         except socket.error as e:
             print('Error in server socket binding: ', e)
             sys.exit(1)
 
-        self._client = ""
+        try:
+            k = open("server_private.pem", "rb")
+            key = RSA.importKey(k.read())
+            self._privateCipher = PKCS1_OAEP.new(key)
+            k.close()
+        except:
+            print("Couldn't open server private key")
+            sys.exit(1)
+
+        try:
+            k = open("server_public.pem", "rb")
+            key = RSA.importKey(k.read())
+            self._publicCipher = PKCS1_OAEP.new(key)
+            k.close()
+        except:
+            print("Couldn't open server public key")
+            sys.exit(1)
+
+        try:
+            d = open("user_pass.json", 'r')
+            self._database = json.loads(d.read())
+            d.close()
+        except:
+            print("Couldn't open user_pass.json")
+            sys.exit(1)
     
     # starts listening on the socket and handles input from client
     def start(self):
@@ -100,22 +95,36 @@ class server:
 
     def handleConnection(self):
         optionsMessage = "\nSelect the operation:\n1) Create and send an email\n2) Display the inbox list\n3) Display the email contents\n4) Terminate the connection\n\nChoice: "
-        self.sendMessageASCII("Welcome to our system.\nEnter your username: ")
 
-        username = self.receiveMessageASCII(2048)
-        if username != "client1":
-            self.sendMessageASCII("Incorrect username. Connection Terminated.")
-            self.terminateClient()
-        
         # Assign the client username to access the email directories
-        self._client = username
+        cl = json.loads((self._privateCipher.decrypt(self._clientConnectionSocket.recv(2048))).decode('ascii'))
+        self._client = cl["username"]
+        password = cl["password"]
 
-        self.sendMessageASCII("Enter your password: ")
-        password = self.receiveMessageASCII(2048)
+        if (self._client in self._database) and (password == self._database[self._client]):
+            try:
+                client_pub = open("{}_public.pem".format(self._client, 'r'))
+                cipher = PKCS1_OAEP.new(RSA.import_key(client_pub.read()))
+            except:
+                print("Failed to open public key")
+                sys.exit(1)
+    
+            self._symkey = get_random_bytes(16)
+            self.symCipher = AES.new(self._symkey, AES.MODE_ECB)
+            self._clientConnectionSocket.send(cipher.encrypt(self._symkey))
+        else:
+            self._clientConnectionSocket.send("Invalid username or password".encode('ascii'))
+            sys.exit(0)
+
+        message = self.receiveMessageASCII(2048)
+
+        if message != "OK":
+            self.terminateClient()
+            sys.exit(1)
         
         self.sendMessageASCII(optionsMessage)
 
-        while self.clientConnected:
+        while 1:
             message = self.receiveMessageASCII(2048)
 
             if message == "OK":
@@ -141,13 +150,13 @@ class server:
 
             elif message == 4:
                 self.terminateClient()
-                continue
+                break
                 
             else:
                 print(message)
                 self.sendMessageASCII("Invalid Option\n" + optionsMessage)
                 continue
-
+            
             self.sendMessageASCII(optionsMessage)
 
         os._exit(0)
@@ -308,25 +317,28 @@ class server:
 
     # Terminate client connection
     def terminateClient(self):
-        self.clientConnectionSocket.close()
-        self.clientConnected = False
+        self._clientConnectionSocket.close()
 
     # blocks waiting for client to connect
     def waitForConnection(self):
-        self.serverSocket.listen(0)
-        self.clientConnectionSocket, self.clientAddr = self.serverSocket.accept()
-        self.clientConnected = True
+        self._serverSocket.listen(0)
+        self._clientConnectionSocket, self._clientAddr = self._serverSocket.accept()
 
-    #send a message to the client encoded as ascii
+    # Send a message to connected client encoded as ascii
     def sendMessageASCII(self, message):
-        self.clientConnectionSocket.send(message.encode("ascii"))
+        ct_bytes = self.symCipher.encrypt(pad(message.encode('ascii'),16))
+        self._clientConnectionSocket.send(ct_bytes)
 
     # recieve a message and decode as ascii up to size
     def receiveMessageASCII(self, size):
-        return self.clientConnectionSocket.recv(size).decode('ascii')
+        enc_message = self._clientConnectionSocket.recv(size)
+        padded_message = self.symCipher.decrypt(enc_message)
+        #Remove padding
+        encoded_message = unpad(padded_message,16)
+        return encoded_message.decode('ascii')
 
 def main():
-    s = server()
+    s = Server()
     s.start()
 
 main()
