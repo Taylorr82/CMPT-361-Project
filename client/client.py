@@ -99,6 +99,10 @@ class Client:
             while 1:
                 message = self.receiveMessageASCII(2048)
 
+                if message.startswith("Could not send the email"):
+                    print(message)
+                    continue
+
                 option = input(message)
                 while (len(option) == 0) or (not option.isdigit()):
                     option = input("Invalid option. Please try again: ")
@@ -129,26 +133,27 @@ class Client:
             sys.exit(1)
 
     def sendEmail(self):
-        m = self.receiveMessageASCII(2048)
-        to = input("Enter destinations (separated by ;): ")
-        title = self.getTitle()
-        choice = self.getChoice()
-        if(choice.strip().lower() == "n"):
-            message = self.getMessage()
-            email = self.createEmail(to, title, message)
+        message = self.receiveMessageASCII(2048)
 
-            # Send the size of the email to the server
-            size = sys.getsizeof(email)
-            self.sendMessageASCII(str(size))
-            # Receive OK from server after
+        if message == "Send the email":
+            to = input("Enter destinations (separated by ;): ")
+            title = self.getTitle()
+            choice = self.getChoice()
+            if (choice.strip().lower() == "n"):
+                message = self.getMessage()
+                email = self.createEmail(to, title, message)
 
-            # Send the email to the server
-            self.sendMessageASCII(email)
-            #self._clientSocket.sendall(email.encode("ascii"))
-            print("The message is sent to the server\n")
-            
-        else:
-            self.readFile(to, title)
+                # Send the size of the email to the server
+                size = sys.getsizeof(email)
+                self.sendMessageASCII(str(size))
+                # Receive OK from server after
+
+                # Send the email to the server
+                self.sendMessageASCII(email)
+                print("The message is sent to the server.\n")
+                
+            else:
+                self.readFile(to, title)
 
     def viewInbox(self):
         message = self.receiveMessageASCII(2048)
@@ -195,7 +200,7 @@ class Client:
                     self.sendMessageASCII(str(size))
 
                     # Send the email to the server
-                    self._clientSocket.sendall(email.encode('ascii'))
+                    self.sendall(email)
                     print("The message is sent to the server\n")
 
         except FileNotFoundError:

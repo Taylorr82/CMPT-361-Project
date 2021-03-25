@@ -73,10 +73,12 @@ class Server:
     
     # starts listening on the socket and handles input from client
     def start(self):
+        print("The server is ready to accept connections...")
+
         while 1:
             try:
                 self.waitForConnection()
-                
+
                 pid = os.fork()
                 if pid == 0:
                     self.handleConnection()
@@ -103,12 +105,14 @@ class Server:
                 with open("{}_public.pem".format(self._client, 'r')) as client_pub:
                     cipher = PKCS1_OAEP.new(RSA.import_key(client_pub.read()))
             except:
-                print("Failed to open public key")
+                print("The received client information: " + self._client + " is invalid (Connection Terminated).")
                 sys.exit(1)
     
             self._symkey = get_random_bytes(16)
             self.symCipher = AES.new(self._symkey, AES.MODE_ECB)
             self._clientConnectionSocket.send(cipher.encrypt(self._symkey))
+            print("Connection Accepted and Symmetric Key Generated for client: " + self._client)
+
         else:
             self._clientConnectionSocket.send("Invalid username or password".encode('ascii'))
             sys.exit(0)
@@ -166,7 +170,8 @@ class Server:
         size = self.receiveMessageASCII(2048)
 
         if("Invalid File!" in size or "Message is too long!" in size):
-            print("Invalid Message!")
+            #print("Invalid Message!")
+            return
 
         else:
             # Create the email
@@ -182,7 +187,7 @@ class Server:
             emailTitle = emailTitleSplit[1]
 
             if(len(emailTitle) > 100 or len(emailContent) > 1000000):
-                print("Invalid Message!")
+                print("Email content is too long!")
 
             else:
                 # Who is the email for
@@ -211,14 +216,15 @@ class Server:
                         fileName = emailFrom + "_" + emailTitle + ".txt"
                         cwd = os.getcwd()
                         for globName in glob.glob(cwd + "/*"):
-                            if name.lower() in globName:
-                                path = os.path.join(globName, fileName)
-                                with open(path, "w") as f:
-                                    for elem in emailSplit:
-                                        temp += elem + "\n"
-                                    f.write(temp)
+                            if ".pem" not in globName:
+                                if name.lower() in globName:
+                                    path = os.path.join(globName, fileName)
+                                    with open(path, "w") as f:
+                                        for elem in emailSplit:
+                                            temp += elem + "\n"
+                                        f.write(temp)
                     else:
-                        print(name + " is an invalid recipient!")
+                        self.sendMessageASCII("Could not send the email: " + name + " is an invalid recipent.\n")
 
     def viewInbox(self):
         message = "{:<15} {:<15} {:<30} {:<15}".format("Index", "From", "DateTime", "Title")
@@ -286,7 +292,7 @@ class Server:
                 m += to[i]
             else:
                 m += to[i] + ";"
-        m += " has a content length of " + str(size) + ".\n"
+        m += " has a content length of " + str(size) + "."
         print(m)
 
     # Get date and time and insert into list
@@ -309,6 +315,7 @@ class Server:
 
     # Terminate client connection
     def terminateClient(self):
+        print("Terminating connection with " + self._client)
         self._clientConnectionSocket.close()
 
     # Blocks waiting for client to connect
