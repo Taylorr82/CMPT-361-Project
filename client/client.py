@@ -91,6 +91,13 @@ class client:
 
             # receive symmetric key
             ekey = self.clientSocket.recv(2048)
+            try: # if it can decode ascii it's clearly not a key
+                ekey = ekey.decode('ascii')
+                print(ekey)
+                self.terminate()
+            except:
+                pass
+        
             self.symkey = self.clientCipher.decrypt(ekey)
             self.symCipher = AES.new(self.symkey, AES.MODE_ECB)
 
@@ -100,8 +107,6 @@ class client:
             while connected:
                 message = self.receiveMessageASCII(2048)
 
-                if "Invalid username or password.\nTerminating.\n" in message:
-                    self.terminate()
 
                 option = input(message)
 
