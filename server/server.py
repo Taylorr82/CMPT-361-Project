@@ -112,7 +112,6 @@ class Server:
             self.symCipher = AES.new(self._symkey, AES.MODE_ECB)
             self._clientConnectionSocket.send(cipher.encrypt(self._symkey))
             print("Connection Accepted and Symmetric Key Generated for client: " + self._client)
-
         else:
             self._clientConnectionSocket.send("Invalid username or password".encode('ascii'))
             sys.exit(0)
@@ -183,12 +182,12 @@ class Server:
             emailFrom = emailFromSplit[1]
 
             emailContent = emailSplit[len(emailSplit) - 1]
+
             emailTitleSplit = emailSplit[2].split()
             emailTitle = emailTitleSplit[1]
 
             if(len(emailTitle) > 100 or len(emailContent) > 1000000):
                 print("Email content is too long!")
-
             else:
                 # Who is the email for
                 to = emailSplit[1].split()

@@ -56,7 +56,6 @@ class Client:
             with open("{}_private.pem".format(self._userName), "rb") as k:
                 key = RSA.importKey(k.read())
                 self._clientCipher = PKCS1_OAEP.new(key)
-
         except:
             print("Couldn't open client private key")
             sys.exit(1)
