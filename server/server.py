@@ -118,7 +118,7 @@ class server:
             self.symCipher = AES.new(self.symkey, AES.MODE_ECB)
             self.clientConnectionSocket.send(cipher.encrypt(self.symkey))
         else:
-            self.clientConnectionSocket.send("Invalid username or password").encode('ascii')
+            self.clientConnectionSocket.send("Invalid username or password".encode('ascii'))
             sys.exit(0)
 
         message = self.receiveMessageASCII(2048)
