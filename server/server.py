@@ -102,7 +102,7 @@ class Server:
 
         if (self._client in self._database) and (password == self._database[self._client]):
             try:
-                with open("{}_public.pem".format(self._client, 'r')) as client_pub:
+                with open("{}_public.pem".format(self._client)) as client_pub:
                     cipher = PKCS1_OAEP.new(RSA.import_key(client_pub.read()))
             except:
                 print("The received client information: " + self._client + " is invalid (Connection Terminated).")
