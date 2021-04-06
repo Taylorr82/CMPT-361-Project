@@ -86,8 +86,8 @@ class Client:
                 ekey = ekey.decode('ascii')
                 print(ekey)
                 self.terminate()
-            except:
-                return
+            except Exception as e:
+                pass
         
             self._symkey = self._clientCipher.decrypt(ekey)
             self._symCipher = AES.new(self._symkey, AES.MODE_ECB)
