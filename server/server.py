@@ -32,6 +32,8 @@ class Server:
         self._publicCipher = None
         self._symkey = None
 
+        self._symCipher = None
+
         try:
             # create socket
             self._serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -102,14 +104,14 @@ class Server:
 
         if (self._client in self._database) and (password == self._database[self._client]):
             try:
-                with open("{}_public.pem".format(self._client)) as client_pub:
+                with open(self._client + "/{}_public.pem".format(self._client)) as client_pub:
                     cipher = PKCS1_OAEP.new(RSA.import_key(client_pub.read()))
             except:
                 print("The received client information: " + self._client + " is invalid (Connection Terminated).")
                 sys.exit(1)
     
             self._symkey = get_random_bytes(16)
-            self.symCipher = AES.new(self._symkey, AES.MODE_ECB)
+            self._symCipher = AES.new(self._symkey, AES.MODE_ECB)
             self._clientConnectionSocket.send(cipher.encrypt(self._symkey))
             print("Connection Accepted and Symmetric Key Generated for client: " + self._client)
         else:
@@ -324,13 +326,13 @@ class Server:
 
     # Send a message to connected client encoded as ascii
     def sendMessageASCII(self, message):
-        ct_bytes = self.symCipher.encrypt(pad(message.encode('ascii'),16))
+        ct_bytes = self._symCipher.encrypt(pad(message.encode('ascii'),16))
         self._clientConnectionSocket.send(ct_bytes)
 
     # Recieve a message and decode as ascii up to size
     def receiveMessageASCII(self, size):
         enc_message = self._clientConnectionSocket.recv(size)
-        padded_message = self.symCipher.decrypt(enc_message)
+        padded_message = self._symCipher.decrypt(enc_message)
         # Remove padding
         encoded_message = unpad(padded_message,16)
         return encoded_message.decode('ascii')
