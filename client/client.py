@@ -86,7 +86,7 @@ class Client:
                 ekey = ekey.decode('ascii')
                 print(ekey)
                 self.terminate()
-            except:
+            except Exception as e:
                 pass
         
             self._symkey = self._clientCipher.decrypt(ekey)
